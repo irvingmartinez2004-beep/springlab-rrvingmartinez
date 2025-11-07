@@ -31,3 +31,5 @@ dependencies {
 tasks.named('test') {
 	useJUnitPlatform()
 }
+
+testImplementation 'com.h2database:h2'
