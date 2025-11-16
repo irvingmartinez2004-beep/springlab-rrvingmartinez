@@ -7,7 +7,6 @@ on:
       - completed
 
 jobs:
-
   deploy:
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
@@ -24,20 +23,28 @@ jobs:
       - name: 📝 Insertar versión en application.yml
         run: |
           sed -i "s/app.version:.*/app.version: ${APP_VERSION}/" src/main/resources/application.yml
+          echo "Nueva version aplicada: ${APP_VERSION}"
 
-      - name: 🚀 Trigger Render Deploy Hook
-        run: curl -X POST "$RENDER_DEPLOY_HOOK"
+      - name: 🚀 Trigger Render Deploy Hook con manejo de error
+        run: |
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$RENDER_DEPLOY_HOOK")
+          echo "Render returned HTTP $STATUS"
+          if [ "$STATUS" -lt 200 ] || [ "$STATUS" -ge 300 ]; then
+            echo "❌ Render deploy failed"
+            exit 1
+          fi
         env:
           RENDER_DEPLOY_HOOK: ${{ secrets.RENDER_DEPLOY_HOOK }}
 
   rollback:
     needs: deploy
-    if: ${{ failure() }}   # rollback si falló el deploy
+    if: ${{ failure() }}  # Ejecuta rollback si el deploy falló
     runs-on: ubuntu-latest
 
     steps:
       - name: Trigger rollback workflow
         uses: benc-uk/workflow-dispatch@v1
         with:
-          workflow: rollback.yml
-          token: ${{ secrets.GITHUB_TOKEN }}
+          workflow: "Rollback - Render Deploy"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

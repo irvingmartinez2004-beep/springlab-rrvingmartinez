@@ -1,7 +1,7 @@
 name: Rollback - Render Deploy
 
 on:
-  workflow_dispatch:   # también se puede ejecutar manual
+  workflow_dispatch:
   workflow_run:
     workflows: ["CD - Deploy to Render"]
     types:
@@ -13,6 +13,9 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Instalar jq
+        run: sudo apt-get install -y jq
+
       - name: 🔑 Set variables
         run: |
           echo "RENDER_SERVICE_ID=srv-d4co8ak9c44c738ugpbg" >> $GITHUB_ENV
@@ -28,6 +31,7 @@ jobs:
       - name: 🔍 Identificar último deploy exitoso
         run: |
           LAST_SUCCESS=$(jq -r '.[] | select(.status=="live") | .id' deploys.json | head -n 1)
+          echo "Último deploy exitoso: $LAST_SUCCESS"
           echo "LAST_SUCCESS=$LAST_SUCCESS" >> $GITHUB_ENV
 
       - name: ♻️ Ejecutar rollback
