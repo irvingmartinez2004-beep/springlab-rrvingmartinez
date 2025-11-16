@@ -13,3 +13,6 @@ spring:
   h2:
     console:
       enabled: true
+
+app:
+  version: 0.0.0

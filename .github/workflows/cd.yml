@@ -7,12 +7,37 @@ on:
       - completed
 
 jobs:
+
   deploy:
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
 
     steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: 🔢 Generar versión de despliegue
+        run: |
+          VERSION="${GITHUB_RUN_NUMBER}-${GITHUB_SHA:0:7}"
+          echo "APP_VERSION=$VERSION" >> $GITHUB_ENV
+
+      - name: 📝 Insertar versión en application.yml
+        run: |
+          sed -i "s/app.version:.*/app.version: ${APP_VERSION}/" src/main/resources/application.yml
+
       - name: 🚀 Trigger Render Deploy Hook
         run: curl -X POST "$RENDER_DEPLOY_HOOK"
         env:
           RENDER_DEPLOY_HOOK: ${{ secrets.RENDER_DEPLOY_HOOK }}
+
+  rollback:
+    needs: deploy
+    if: ${{ failure() }}   # rollback si falló el deploy
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Trigger rollback workflow
+        uses: benc-uk/workflow-dispatch@v1
+        with:
+          workflow: rollback.yml
+          token: ${{ secrets.GITHUB_TOKEN }}
