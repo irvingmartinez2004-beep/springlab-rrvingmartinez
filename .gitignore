@@ -39,6 +39,5 @@ out/
 ### Logs
 *.log
 
-
 .DB_STORE
 Thumbs.db
